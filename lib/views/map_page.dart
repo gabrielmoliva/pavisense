@@ -1,8 +1,11 @@
+import 'dart:developer';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../services/location_service.dart';
 import '../widgets/location_button.dart';
+import '../models/location_model.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -13,7 +16,7 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
-  LatLng _center = LatLng(-23.55052, -46.633308); // São Paulo
+  LatLng _center = LatLng(-14.235004, -51.92528); // Brasil
 
   void _goToUserLocation() async {
     final service = LocationService();
@@ -25,21 +28,37 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  void _setInitialLocation() async {
+    final service = LocationService();
+    final initialLocation = await service.getCurrentLocation();
+
+    if(initialLocation!=null) {
+      final userInitialPosition = LatLng(initialLocation.latitude, initialLocation.longitude);
+      setState(() => _center = userInitialPosition);
+      _mapController.move(userInitialPosition, 17);
+    }
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _setInitialLocation();
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text("Mapa com OSM")),
+      //appBar: AppBar(title: const Text("Mapa com OSM")),
       body: FlutterMap(
         mapController: _mapController,
         options: MapOptions(
           initialCenter: _center,
-          initialZoom: 13,
+          initialZoom: 20,
         ),
         children: [
           TileLayer(
-            urlTemplate: "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png",
-            subdomains: const ['a', 'b', 'c'],
-            userAgentPackageName: 'com.seuapp.exemplo',
+            urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
+            userAgentPackageName: 'com.pavisense.exemple',
           ),
           /* MarkerLayer(
             markers: [
@@ -53,7 +72,7 @@ class _MapPageState extends State<MapPage> {
           ), */
         ],
       ),
-      //floatingActionButton: LocationButton(onPressed: _goToUserLocation),
+      floatingActionButton: LocationButton(onPressed: _goToUserLocation),
     );
   }
 }
