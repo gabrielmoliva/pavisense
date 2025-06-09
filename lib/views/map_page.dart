@@ -1,10 +1,10 @@
-import 'dart:developer';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:pavisense/widgets/data_collection_button.dart';
 import '../services/location_service.dart';
 import '../widgets/location_button.dart';
+import '../widgets/data_collection_button.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -30,8 +30,11 @@ class _MapPageState extends State<MapPage> {
   void _setInitialLocation() async {
     final service = LocationService();
     final initialLocation = await service.getCurrentLocation();
-    if(initialLocation!=null) {
-      final userInitialPosition = LatLng(initialLocation.latitude, initialLocation.longitude);
+    if (initialLocation != null) {
+      final userInitialPosition = LatLng(
+        initialLocation.latitude,
+        initialLocation.longitude,
+      );
       setState(() => _center = userInitialPosition);
       _mapController.move(userInitialPosition, 17);
     }
@@ -49,10 +52,7 @@ class _MapPageState extends State<MapPage> {
       //appBar: AppBar(title: const Text("Mapa com OSM")),
       body: FlutterMap(
         mapController: _mapController,
-        options: MapOptions(
-          initialCenter: _center,
-          initialZoom: 20,
-        ),
+        options: MapOptions(initialCenter: _center, initialZoom: 20),
         children: [
           TileLayer(
             urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
@@ -70,7 +70,18 @@ class _MapPageState extends State<MapPage> {
           ), */
         ],
       ),
-      floatingActionButton: LocationButton(onPressed: _goToUserLocation),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            LocationButton(onPressed: _goToUserLocation),
+            const Spacer(),
+            DataCollectionButton(onPressed: _goToUserLocation),
+            const Spacer()
+          ],
+        ),
+      ),
     );
   }
 }
