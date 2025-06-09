@@ -5,7 +5,6 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import '../services/location_service.dart';
 import '../widgets/location_button.dart';
-import '../models/location_model.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -24,14 +23,13 @@ class _MapPageState extends State<MapPage> {
     if (location != null) {
       final userPos = LatLng(location.latitude, location.longitude);
       setState(() => _center = userPos);
-      _mapController.move(userPos, 15);
+      _mapController.move(userPos, 17);
     }
   }
 
   void _setInitialLocation() async {
     final service = LocationService();
     final initialLocation = await service.getCurrentLocation();
-
     if(initialLocation!=null) {
       final userInitialPosition = LatLng(initialLocation.latitude, initialLocation.longitude);
       setState(() => _center = userInitialPosition);
