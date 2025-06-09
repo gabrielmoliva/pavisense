@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pavisense/views/map_page.dart';
 
 void main() {
   runApp( MyApp() );
@@ -11,14 +12,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(
-          backgroundColor: Colors.deepPurple,
-          title: const Text('Texto radicarlos'),
-        ),
-        body: Stack(
-          
-        ),
-        
+        body: MapPage(),
       )
     );
   }
