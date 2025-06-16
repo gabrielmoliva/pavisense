@@ -17,14 +17,18 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
   LatLng _center = LatLng(-14.235004, -51.92528); // Brasil
-  StreamSubscription<Position>? _positionStream; // Adicione isso
+  StreamSubscription<Position>? _positionStream;
+  bool _followUser = true;
 
   void _goToUserLocation() async {
     final service = LocationService();
     final location = await service.getCurrentLocation();
     if (location != null) {
       final userPos = LatLng(location.latitude, location.longitude);
-      setState(() => _center = userPos);
+      setState(() {
+        _center = userPos;
+        _followUser = true;
+      });
       _mapController.move(userPos, 17);
     }
   }
@@ -43,16 +47,18 @@ class _MapPageState extends State<MapPage> {
   }
 
   void _listenToLocationChanges() {
-    _positionStream = Geolocator.getPositionStream(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-        distanceFilter: 5,
-      ),
-    ).listen((Position position) {
-      final newPos = LatLng(position.latitude, position.longitude);
-      setState(() => _center = newPos);
-      _mapController.move(newPos, _mapController.camera.zoom);
-    });
+    _positionStream =
+        Geolocator.getPositionStream(
+          locationSettings: const LocationSettings(
+            accuracy: LocationAccuracy.high,
+            distanceFilter: 5,
+          ),
+        ).listen((Position position) {
+          final newPos = LatLng(position.latitude, position.longitude);
+          setState(() => _center = newPos);
+          if (_followUser)
+            _mapController.move(newPos, _mapController.camera.zoom);
+        });
   }
 
   @override
@@ -68,6 +74,26 @@ class _MapPageState extends State<MapPage> {
     super.dispose();
   }
 
+  Marker userMarker() {
+    return Marker(
+      point: _center,
+      width: 40,
+      height: 40,
+      child: Container(
+        decoration: BoxDecoration(
+          color: Colors.blue,
+          shape: BoxShape.circle,
+          border: Border.all(color: Colors.white, width: 3),
+        ),
+        child: const Icon(
+          Icons.person_pin_circle,
+          color: Colors.white,
+          size: 28,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -76,33 +102,24 @@ class _MapPageState extends State<MapPage> {
         children: [
           FlutterMap(
             mapController: _mapController,
-            options: MapOptions(initialCenter: _center, initialZoom: 20),
+            options: MapOptions(
+              initialCenter: _center,
+              initialZoom: 20,
+              onPositionChanged: (position, hasGesture) {
+                if (hasGesture && _followUser) {
+                  setState(() {
+                    _followUser =
+                        false; // para de seguir o usuario se ele mexer o mapa
+                  });
+                }
+              },
+            ),
             children: [
               TileLayer(
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 userAgentPackageName: 'com.pavisense.example',
               ),
-              MarkerLayer(
-                markers: [
-                  Marker(
-                    point: _center,
-                    width: 40,
-                    height: 40,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.white, width: 3),
-                      ),
-                      child: const Icon(
-                        Icons.person_pin_circle,
-                        color: Colors.white,
-                        size:28,
-                      ),
-                    )
-                  )
-                ]
-              )
+              MarkerLayer(markers: [userMarker()]),
             ],
           ),
           Align(
