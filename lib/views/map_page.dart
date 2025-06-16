@@ -6,6 +6,7 @@ import 'package:pavisense/widgets/data_collection_button.dart';
 import '../services/location_service.dart';
 import '../widgets/location_button.dart';
 import 'package:geolocator/geolocator.dart';
+import '../widgets/search_location_bar.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -19,6 +20,7 @@ class _MapPageState extends State<MapPage> {
   LatLng _center = LatLng(-14.235004, -51.92528); // Brasil
   StreamSubscription<Position>? _positionStream;
   bool _followUser = true;
+  double defaultZoom = 18;
 
   void _goToUserLocation() async {
     final service = LocationService();
@@ -29,7 +31,7 @@ class _MapPageState extends State<MapPage> {
         _center = userPos;
         _followUser = true;
       });
-      _mapController.move(userPos, 17);
+      _mapController.move(userPos, defaultZoom);
     }
   }
 
@@ -42,7 +44,7 @@ class _MapPageState extends State<MapPage> {
         initialLocation.longitude,
       );
       setState(() => _center = userInitialPosition);
-      _mapController.move(userInitialPosition, 17);
+      _mapController.move(userInitialPosition, defaultZoom);
     }
   }
 
@@ -56,8 +58,9 @@ class _MapPageState extends State<MapPage> {
         ).listen((Position position) {
           final newPos = LatLng(position.latitude, position.longitude);
           setState(() => _center = newPos);
-          if (_followUser)
+          if (_followUser) {
             _mapController.move(newPos, _mapController.camera.zoom);
+          }
         });
   }
 
@@ -136,6 +139,20 @@ class _MapPageState extends State<MapPage> {
               child: LocationButton(onPressed: _goToUserLocation),
             ),
           ),
+          Positioned(
+            top: 40,
+            left:24,
+            right: 24,
+            child: SearchLocationBar(
+              onLocationSelected: (lat, lon, displayName) {
+                final newPos = LatLng(lat, lon);
+                setState(() {
+                  //_center = newPos;
+                  _followUser = false;
+                });
+                _mapController.move(newPos, defaultZoom);
+              }),
+          )
         ],
       ),
     );
