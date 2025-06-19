@@ -21,6 +21,8 @@ class _MapPageState extends State<MapPage> {
   StreamSubscription<Position>? _positionStream;
   bool _followUser = true;
   double defaultZoom = 18;
+  bool _isCollecting = false;
+  Timer? _collectionTimer;
 
   void _goToUserLocation() async {
     final service = LocationService();
@@ -62,6 +64,22 @@ class _MapPageState extends State<MapPage> {
             _mapController.move(newPos, _mapController.camera.zoom);
           }
         });
+  }
+
+  void _toggleDataColletion() async {
+    if (_isCollecting) {
+      _collectionTimer?.cancel();
+      setState(() => _isCollecting = false);
+      return;
+    }
+    _collectionTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+      final position = await Geolocator.getCurrentPosition();
+      final now = DateTime.now();
+      print(
+        'Latitude: ${position.latitude}, Longitude: ${position.longitude}, Timestamp: $now',
+      );
+    });
+    _isCollecting = true;
   }
 
   @override
@@ -129,7 +147,10 @@ class _MapPageState extends State<MapPage> {
             alignment: Alignment.bottomCenter,
             child: Padding(
               padding: const EdgeInsets.only(bottom: 24.0),
-              child: DataCollectionButton(onPressed: _goToUserLocation),
+              child: DataCollectionButton(
+                onPressed: _toggleDataColletion,
+                isCollecting: _isCollecting,
+              ),
             ),
           ),
           Align(
@@ -141,7 +162,7 @@ class _MapPageState extends State<MapPage> {
           ),
           Positioned(
             top: 40,
-            left:24,
+            left: 24,
             right: 24,
             child: SearchLocationBar(
               onLocationSelected: (lat, lon, displayName) {
@@ -151,8 +172,9 @@ class _MapPageState extends State<MapPage> {
                   _followUser = false;
                 });
                 _mapController.move(newPos, defaultZoom);
-              }),
-          )
+              },
+            ),
+          ),
         ],
       ),
     );
