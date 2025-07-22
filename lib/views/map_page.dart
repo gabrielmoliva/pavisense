@@ -7,6 +7,9 @@ import '../services/location_service.dart';
 import '../widgets/location_button.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/search_location_bar.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
+import 'package:sensors_plus/sensors_plus.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -23,7 +26,12 @@ class _MapPageState extends State<MapPage> {
   double defaultZoom = 18;
   bool _isCollecting = false;
   Timer? _collectionTimer;
+  StreamSubscription<AccelerometerEvent>? _accSubscription;
+  StreamSubscription<GyroscopeEvent>? _gyroSubscription;
+  List<double>? _accValues;
+  List<double>? _gyroValues;
 
+  // moves the map to the current user location
   void _goToUserLocation() async {
     final service = LocationService();
     final location = await service.getCurrentLocation();
@@ -37,6 +45,7 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  // sets initial location for the map
   void _setInitialLocation() async {
     final service = LocationService();
     final initialLocation = await service.getCurrentLocation();
@@ -50,6 +59,7 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
+  // follows the location of the user and updates the map accordingly
   void _listenToLocationChanges() {
     _positionStream =
         Geolocator.getPositionStream(
@@ -66,20 +76,56 @@ class _MapPageState extends State<MapPage> {
         });
   }
 
+  // starts collecting and sending data to backend
   void _toggleDataColletion() async {
     if (_isCollecting) {
       _collectionTimer?.cancel();
+      _accSubscription?.cancel();
+      _gyroSubscription?.cancel();
       setState(() => _isCollecting = false);
       return;
     }
+
+    // inicia a coleta dos dados de acelerometro e giroscopio
+    _accSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+      _accValues = [event.x, event.y, event.z];
+    });
+    _gyroSubscription = gyroscopeEventStream().listen((GyroscopeEvent event) {
+      _gyroValues = [event.x, event.y, event.z];
+    });
+
     _collectionTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
       final position = await Geolocator.getCurrentPosition();
       final now = DateTime.now();
-      print(
-        'Latitude: ${position.latitude}, Longitude: ${position.longitude}, Timestamp: $now',
-      );
+
+      _sendData(position, now);
+      // print(
+      //   'Latitude: ${position.latitude}, Longitude: ${position.longitude}, Timestamp: $now',
+      // );
     });
     _isCollecting = true;
+  }
+
+  // sends collected data to backend for model prediction
+  void _sendData(Position position, DateTime now) async {
+    final lat = position.latitude;
+    final long = position.longitude;
+    final timestamp = now.millisecondsSinceEpoch;
+
+    final response = await http.post(
+      Uri.parse('http://10.0.2.2:8000/sendData'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'timestamp': '$timestamp',
+        'long': '$long',
+        'lat': '$lat',
+        'accValues': _accValues ?? [0.0, 0.0, 0.0],
+        'gyroValues': _gyroValues ?? [0.0, 0.0, 0.0],
+      }),
+    );
+    if (response.statusCode == 201) {
+      print(jsonDecode(response.body));
+    }
   }
 
   @override
