@@ -82,15 +82,15 @@ class _MapPageState extends State<MapPage> {
 
   // starts collecting and sending data to backend
   void _toggleDataColletion() async {
-    print('ativou colecao de dados');
     if (_isCollecting) {
-      print('desativou colecao de dados');
       _collectionTimer?.cancel();
       _accSubscription?.cancel();
       _gyroSubscription?.cancel();
       setState(() => _isCollecting = false);
+      _ws.sink.close();
       return;
     }
+    _ws = WebSocketChannel.connect(Uri.parse(wsUrl!));
 
     // inicia a coleta dos dados de acelerometro e giroscopio
     _accSubscription = accelerometerEventStream().listen((
@@ -102,7 +102,7 @@ class _MapPageState extends State<MapPage> {
       _gyroValues = [event.x, event.y, event.z];
     });
 
-    _collectionTimer = Timer.periodic(const Duration(seconds: 1), (_) async {
+    _collectionTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
       final position = await Geolocator.getCurrentPosition();
       final now = DateTime.now();
 
@@ -113,7 +113,6 @@ class _MapPageState extends State<MapPage> {
 
   // sends collected data to backend for model prediction
   void _sendData(Position position, DateTime now) async {
-    // TODO: mover inicializacao do websocket pra ca ou pra funcao de cima
     final speed = position.speed;
 
     if (speed<=0) return;
@@ -139,13 +138,10 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _setInitialLocation();
     _listenToLocationChanges();
-    print(wsUrl);
-    _ws = WebSocketChannel.connect(Uri.parse(wsUrl!));
   }
 
   @override
   void dispose() {
-    _ws.sink.close();
     _positionStream?.cancel(); // Cancele o stream ao destruir o widget
     super.dispose();
   }
