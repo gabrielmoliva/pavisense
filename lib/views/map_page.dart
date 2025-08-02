@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pavisense/widgets/data_collection_button.dart';
+import 'package:web_socket_channel/web_socket_channel.dart';
 import '../services/location_service.dart';
 import '../widgets/location_button.dart';
 import 'package:geolocator/geolocator.dart';
@@ -10,6 +11,7 @@ import '../widgets/search_location_bar.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 import 'package:sensors_plus/sensors_plus.dart';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -30,6 +32,8 @@ class _MapPageState extends State<MapPage> {
   StreamSubscription<GyroscopeEvent>? _gyroSubscription;
   List<double>? _accValues;
   List<double>? _gyroValues;
+  final wsUrl = dotenv.env['WS_URL']; // websocket url
+  late WebSocketChannel _ws;
 
   // moves the map to the current user location
   void _goToUserLocation() async {
@@ -78,7 +82,9 @@ class _MapPageState extends State<MapPage> {
 
   // starts collecting and sending data to backend
   void _toggleDataColletion() async {
+    print('ativou colecao de dados');
     if (_isCollecting) {
+      print('desativou colecao de dados');
       _collectionTimer?.cancel();
       _accSubscription?.cancel();
       _gyroSubscription?.cancel();
@@ -87,7 +93,9 @@ class _MapPageState extends State<MapPage> {
     }
 
     // inicia a coleta dos dados de acelerometro e giroscopio
-    _accSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+    _accSubscription = accelerometerEventStream().listen((
+      AccelerometerEvent event,
+    ) {
       _accValues = [event.x, event.y, event.z];
     });
     _gyroSubscription = gyroscopeEventStream().listen((GyroscopeEvent event) {
@@ -99,33 +107,31 @@ class _MapPageState extends State<MapPage> {
       final now = DateTime.now();
 
       _sendData(position, now);
-      // print(
-      //   'Latitude: ${position.latitude}, Longitude: ${position.longitude}, Timestamp: $now',
-      // );
     });
     _isCollecting = true;
   }
 
   // sends collected data to backend for model prediction
   void _sendData(Position position, DateTime now) async {
+    // TODO: mover inicializacao do websocket pra ca ou pra funcao de cima
+    final speed = position.speed;
+
+    if (speed<=0) return;
+
     final lat = position.latitude;
     final long = position.longitude;
     final timestamp = now.millisecondsSinceEpoch;
+    
+    final String jsonPayload = jsonEncode({
+      'timestamp': timestamp,
+      'lat': lat,
+      'long': long,
+      'accValues': _accValues ?? [0.0, 0.0, 0.0],
+      'gyroValues': _gyroValues ?? [0.0, 0.0, 0.0],
+      'speed': speed,
+    });
 
-    final response = await http.post(
-      Uri.parse('http://10.0.2.2:8000/sendData'),
-      headers: {'Content-Type': 'application/json'},
-      body: jsonEncode({
-        'timestamp': '$timestamp',
-        'long': '$long',
-        'lat': '$lat',
-        'accValues': _accValues ?? [0.0, 0.0, 0.0],
-        'gyroValues': _gyroValues ?? [0.0, 0.0, 0.0],
-      }),
-    );
-    if (response.statusCode == 201) {
-      print(jsonDecode(response.body));
-    }
+    _ws.sink.add(jsonPayload);
   }
 
   @override
@@ -133,10 +139,13 @@ class _MapPageState extends State<MapPage> {
     super.initState();
     _setInitialLocation();
     _listenToLocationChanges();
+    print(wsUrl);
+    _ws = WebSocketChannel.connect(Uri.parse(wsUrl!));
   }
 
   @override
   void dispose() {
+    _ws.sink.close();
     _positionStream?.cancel(); // Cancele o stream ao destruir o widget
     super.dispose();
   }
