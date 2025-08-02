@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
+import 'package:pavisense/models/ponto_conforto_model.dart';
 import 'package:pavisense/widgets/data_collection_button.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 import '../services/location_service.dart';
@@ -34,6 +35,8 @@ class _MapPageState extends State<MapPage> {
   List<double>? _gyroValues;
   final wsUrl = dotenv.env['WS_URL']; // websocket url
   late WebSocketChannel _ws;
+  List<PontoConfortoModel> _pontos = [];
+  final ValueNotifier<List<Polyline>> _polylines = ValueNotifier([]);
 
   // moves the map to the current user location
   void _goToUserLocation() async {
@@ -92,6 +95,8 @@ class _MapPageState extends State<MapPage> {
     }
     _ws = WebSocketChannel.connect(Uri.parse(wsUrl!));
 
+    _listenForConfortPoints();
+
     // inicia a coleta dos dados de acelerometro e giroscopio
     _accSubscription = accelerometerEventStream().listen((
       AccelerometerEvent event,
@@ -132,6 +137,38 @@ class _MapPageState extends State<MapPage> {
 
     _ws.sink.add(jsonPayload);
   }
+
+  // receives confort points from back-end and draws them on the map
+  void _listenForConfortPoints() {
+    _ws.stream.listen((message) {
+      final decoded = jsonDecode(message);
+      PontoConfortoModel ponto = PontoConfortoModel.fromJson(decoded);
+
+      _addPontoConforto(ponto);
+    });
+  }
+
+  // add confort points to their respective Lists
+  void _addPontoConforto(PontoConfortoModel novoPonto) {
+  final novoLatLng = LatLng(novoPonto.lat, novoPonto.long);
+
+  if (_pontos.isNotEmpty) {
+    final anterior = _pontos.last;
+    final anteriorLatLng = LatLng(anterior.lat, anterior.long);
+
+    final cor = novoPonto.conforto == 1 ? Colors.green : Colors.red;
+
+    final segmento = Polyline(
+      points: [anteriorLatLng, novoLatLng],
+      color: cor,
+      strokeWidth: 6.0,
+    );
+
+    _polylines.value = [..._polylines.value, segmento];
+  }
+
+  _pontos.add(novoPonto);
+}
 
   @override
   void initState() {
@@ -190,6 +227,12 @@ class _MapPageState extends State<MapPage> {
               TileLayer(
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 userAgentPackageName: 'com.pavisense.example',
+              ),
+              ValueListenableBuilder<List<Polyline>>(
+                valueListenable: _polylines,
+                builder: (context, linhas, _) {
+                  return PolylineLayer(polylines: linhas);
+                },
               ),
               MarkerLayer(markers: [userMarker()]),
             ],
