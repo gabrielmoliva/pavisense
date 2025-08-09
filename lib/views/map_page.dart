@@ -3,16 +3,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pavisense/models/ponto_conforto_model.dart';
+import 'package:pavisense/services/data_handler_service.dart';
 import 'package:pavisense/widgets/data_collection_button.dart';
-import 'package:web_socket_channel/web_socket_channel.dart';
 import '../services/location_service.dart';
 import '../widgets/location_button.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/search_location_bar.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
-import 'package:sensors_plus/sensors_plus.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -23,20 +19,14 @@ class MapPage extends StatefulWidget {
 
 class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
+  final DataHandlerService dataHandlerService = DataHandlerService();
   LatLng _center = LatLng(-14.235004, -51.92528); // Brasil
   StreamSubscription<Position>? _positionStream;
   bool _followUser = true;
   double defaultZoom = 18;
   bool _isCollecting = false;
-  Timer? _collectionTimer;
-  StreamSubscription<AccelerometerEvent>? _accSubscription;
-  StreamSubscription<GyroscopeEvent>? _gyroSubscription;
-  List<double>? _accValues;
-  List<double>? _gyroValues;
-  final wsUrl = dotenv.env['WS_URL']; // websocket url
-  late WebSocketChannel _ws;
-  List<PontoConfortoModel> _pontos = [];
-  final ValueNotifier<List<Polyline>> _polylines = ValueNotifier([]);
+  // List<PontoConfortoModel> _pontos = [];
+  // final ValueNotifier<List<Polyline>> _polylines = ValueNotifier([]);
 
   // moves the map to the current user location
   void _goToUserLocation() async {
@@ -86,89 +76,71 @@ class _MapPageState extends State<MapPage> {
   // starts collecting and sending data to backend
   void _toggleDataColletion() async {
     if (_isCollecting) {
-      _collectionTimer?.cancel();
-      _accSubscription?.cancel();
-      _gyroSubscription?.cancel();
+      dataHandlerService.stop();
       setState(() => _isCollecting = false);
-      _ws.sink.close();
       return;
     }
-    _ws = WebSocketChannel.connect(Uri.parse(wsUrl!));
-
-    _listenForConfortPoints();
-
-    // inicia a coleta dos dados de acelerometro e giroscopio
-    _accSubscription = accelerometerEventStream().listen((
-      AccelerometerEvent event,
-    ) {
-      _accValues = [event.x, event.y, event.z];
-    });
-    _gyroSubscription = gyroscopeEventStream().listen((GyroscopeEvent event) {
-      _gyroValues = [event.x, event.y, event.z];
-    });
-
-    _collectionTimer = Timer.periodic(const Duration(milliseconds: 100), (_) async {
-      final position = await Geolocator.getCurrentPosition();
-      final now = DateTime.now();
-
-      _sendData(position, now);
-    });
     _isCollecting = true;
+    dataHandlerService.start(Duration(seconds: 1));
   }
 
-  // sends collected data to backend for model prediction
-  void _sendData(Position position, DateTime now) async {
-    final speed = position.speed;
+  // // sends collected data to backend for model prediction
+  // void _sendData(Position position, DateTime now) async {
+  //   final speed = position.speed;
 
-    if (speed<=0) return;
+  //   if (speed<=0) return;
 
-    final lat = position.latitude;
-    final long = position.longitude;
-    final timestamp = now.millisecondsSinceEpoch;
+  //   final lat = position.latitude;
+  //   final long = position.longitude;
+  //   final timestamp = now.millisecondsSinceEpoch;
     
-    final String jsonPayload = jsonEncode({
-      'timestamp': timestamp,
-      'lat': lat,
-      'long': long,
-      'accValues': _accValues ?? [0.0, 0.0, 0.0],
-      'gyroValues': _gyroValues ?? [0.0, 0.0, 0.0],
-      'speed': speed,
-    });
+  //   final String jsonPayload = jsonEncode({
+  //     'timestamp': timestamp,
+  //     'lat': lat,
+  //     'long': long,
+  //     'acc_x_std': _accValues?[0] ?? 0.0,
+  //     'acc_y_std': _accValues?[1] ?? 0.0,
+  //     'acc_z_std': _accValues?[2] ?? 0.0,
+  //     'gyro_x_std': _gyroValues?[0] ?? 0.0,
+  //     'gyro_y_std': _gyroValues?[1] ?? 0.0,
+  //     'gyro_z_std': _gyroValues?[2] ?? 0.0,
+  //     'speed': speed,
+  //   });
 
-    _ws.sink.add(jsonPayload);
-  }
+  //   _ws.sink.add(jsonPayload);
+  // }
 
-  // receives confort points from back-end and draws them on the map
-  void _listenForConfortPoints() {
-    _ws.stream.listen((message) {
-      final decoded = jsonDecode(message);
-      PontoConfortoModel ponto = PontoConfortoModel.fromJson(decoded);
+  // // receives confort points from back-end and draws them on the map
+  // void _listenForConfortPoints() {
+  //   _ws.stream.listen((message) {
+  //     final decoded = jsonDecode(message);
+  //     PontoConfortoModel ponto = PontoConfortoModel.fromJson(decoded);
 
-      _addPontoConforto(ponto);
-    });
-  }
+  //     _addPontoConforto(ponto);
+  //   });
+  // }
 
-  // add confort points to their respective Lists
-  void _addPontoConforto(PontoConfortoModel novoPonto) {
-  final novoLatLng = LatLng(novoPonto.lat, novoPonto.long);
+  // // add confort points to their respective Lists
+  // void _addPontoConforto(PontoConfortoModel novoPonto) {
+  //   final novoLatLng = LatLng(novoPonto.lat, novoPonto.long);
 
-  if (_pontos.isNotEmpty) {
-    final anterior = _pontos.last;
-    final anteriorLatLng = LatLng(anterior.lat, anterior.long);
+  //   if (_pontos.isNotEmpty) {
+  //     final anterior = _pontos.last;
+  //     final anteriorLatLng = LatLng(anterior.lat, anterior.long);
 
-    final cor = novoPonto.conforto == 1 ? Colors.green : Colors.red;
+  //     final cor = novoPonto.conforto == 1 ? Colors.green : Colors.red;
 
-    final segmento = Polyline(
-      points: [anteriorLatLng, novoLatLng],
-      color: cor,
-      strokeWidth: 6.0,
-    );
+  //     final segmento = Polyline(
+  //       points: [anteriorLatLng, novoLatLng],
+  //       color: cor,
+  //       strokeWidth: 6.0,
+  //     );
 
-    _polylines.value = [..._polylines.value, segmento];
-  }
+  //     _polylines.value = [..._polylines.value, segmento];
+  //   }
 
-  _pontos.add(novoPonto);
-}
+  //   _pontos.add(novoPonto);
+  // }
 
   @override
   void initState() {
@@ -228,12 +200,12 @@ class _MapPageState extends State<MapPage> {
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 userAgentPackageName: 'com.pavisense.example',
               ),
-              ValueListenableBuilder<List<Polyline>>(
-                valueListenable: _polylines,
-                builder: (context, linhas, _) {
-                  return PolylineLayer(polylines: linhas);
-                },
-              ),
+              // ValueListenableBuilder<List<Polyline>>(
+              //   valueListenable: _polylines,
+              //   builder: (context, linhas, _) {
+              //     return PolylineLayer(polylines: linhas);
+              //   },
+              // ),
               MarkerLayer(markers: [userMarker()]),
             ],
           ),
