@@ -25,8 +25,6 @@ class _MapPageState extends State<MapPage> {
   bool _followUser = true;
   double defaultZoom = 18;
   bool _isCollecting = false;
-  // List<PontoConfortoModel> _pontos = [];
-  // final ValueNotifier<List<Polyline>> _polylines = ValueNotifier([]);
 
   // moves the map to the current user location
   void _goToUserLocation() async {
@@ -42,35 +40,25 @@ class _MapPageState extends State<MapPage> {
     }
   }
 
-  // sets initial location for the map
-  void _setInitialLocation() async {
-    final service = LocationService();
-    final initialLocation = await service.getCurrentLocation();
-    if (initialLocation != null) {
-      final userInitialPosition = LatLng(
-        initialLocation.latitude,
-        initialLocation.longitude,
-      );
-      setState(() => _center = userInitialPosition);
-      _mapController.move(userInitialPosition, defaultZoom);
-    }
-  }
+  // starts map on the users current location and starts to follow user
+  Future<void> _initializeMap() async {
+    final locationService = LocationService();
 
-  // follows the location of the user and updates the map accordingly
-  void _listenToLocationChanges() {
-    _positionStream =
-        Geolocator.getPositionStream(
-          locationSettings: const LocationSettings(
-            accuracy: LocationAccuracy.high,
-            distanceFilter: 5,
-          ),
-        ).listen((Position position) {
-          final newPos = LatLng(position.latitude, position.longitude);
-          setState(() => _center = newPos);
-          if (_followUser) {
-            _mapController.move(newPos, _mapController.camera.zoom);
-          }
-        });
+    final initialLocation = await locationService.getFirstPositionFromStream();
+    if (initialLocation != null) {
+      final initialLatLng = LatLng(initialLocation.latitude, initialLocation.longitude);
+      setState(() => _center = initialLatLng);
+      _mapController.move(initialLatLng, defaultZoom);
+    }
+
+    _positionStream = locationService.getPositionStream(distanceFilter: 1).listen((position) {
+      final newPos = LatLng(position.latitude, position.longitude);
+      setState(() => _center = newPos);
+
+      if (_followUser) {
+        _mapController.move(newPos, _mapController.camera.zoom);
+      }
+    });
   }
 
   // starts collecting and sending data to backend
@@ -81,72 +69,13 @@ class _MapPageState extends State<MapPage> {
       return;
     }
     _isCollecting = true;
-    dataHandlerService.start(Duration(seconds: 1));
+    dataHandlerService.start(Duration(milliseconds: 100));
   }
-
-  // // sends collected data to backend for model prediction
-  // void _sendData(Position position, DateTime now) async {
-  //   final speed = position.speed;
-
-  //   if (speed<=0) return;
-
-  //   final lat = position.latitude;
-  //   final long = position.longitude;
-  //   final timestamp = now.millisecondsSinceEpoch;
-    
-  //   final String jsonPayload = jsonEncode({
-  //     'timestamp': timestamp,
-  //     'lat': lat,
-  //     'long': long,
-  //     'acc_x_std': _accValues?[0] ?? 0.0,
-  //     'acc_y_std': _accValues?[1] ?? 0.0,
-  //     'acc_z_std': _accValues?[2] ?? 0.0,
-  //     'gyro_x_std': _gyroValues?[0] ?? 0.0,
-  //     'gyro_y_std': _gyroValues?[1] ?? 0.0,
-  //     'gyro_z_std': _gyroValues?[2] ?? 0.0,
-  //     'speed': speed,
-  //   });
-
-  //   _ws.sink.add(jsonPayload);
-  // }
-
-  // // receives confort points from back-end and draws them on the map
-  // void _listenForConfortPoints() {
-  //   _ws.stream.listen((message) {
-  //     final decoded = jsonDecode(message);
-  //     PontoConfortoModel ponto = PontoConfortoModel.fromJson(decoded);
-
-  //     _addPontoConforto(ponto);
-  //   });
-  // }
-
-  // // add confort points to their respective Lists
-  // void _addPontoConforto(PontoConfortoModel novoPonto) {
-  //   final novoLatLng = LatLng(novoPonto.lat, novoPonto.long);
-
-  //   if (_pontos.isNotEmpty) {
-  //     final anterior = _pontos.last;
-  //     final anteriorLatLng = LatLng(anterior.lat, anterior.long);
-
-  //     final cor = novoPonto.conforto == 1 ? Colors.green : Colors.red;
-
-  //     final segmento = Polyline(
-  //       points: [anteriorLatLng, novoLatLng],
-  //       color: cor,
-  //       strokeWidth: 6.0,
-  //     );
-
-  //     _polylines.value = [..._polylines.value, segmento];
-  //   }
-
-  //   _pontos.add(novoPonto);
-  // }
 
   @override
   void initState() {
     super.initState();
-    _setInitialLocation();
-    _listenToLocationChanges();
+    _initializeMap();
   }
 
   @override
