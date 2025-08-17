@@ -1,25 +1,24 @@
 import 'package:pavisense/models/ponto_conforto_model.dart';
-import 'package:flutter_map/flutter_map.dart';
+import 'package:latlong2/latlong.dart';
 
 class DrawService {
   final List<PontoConfortoModel> _globalTrajectories = [];
-  List<Polyline> polylines = [];
+  final List<LatLng> _polyline = <LatLng>[];
+  // final List<List<LatLng>> _polylines = [];
 
-  void addPoints(List<PontoConfortoModel> pontos) {
+  void addPoints(List<PontoConfortoModel> pontos) async {
     _globalTrajectories.addAll(pontos);
-    for (PontoConfortoModel ponto in _globalTrajectories) {
-      polylines.add(Polyline(
-        points: [ponto.coords],
-        strokeWidth: 4,
-        color: ponto.getColor()));
+    for (PontoConfortoModel ponto in pontos) {
+      _polyline.add(ponto.coords);
     }
+    // _polylines.add(_polyline);
   }
 
   List<PontoConfortoModel> getPoints() {
     return _globalTrajectories;
   }
 
-  List<Polyline> getPolylines() {
-    return polylines;
+  List<List<LatLng>> getPolylines() {
+    return [_polyline];
   }
 }
