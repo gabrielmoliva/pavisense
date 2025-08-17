@@ -2,7 +2,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
-import 'package:pavisense/models/ponto_conforto_model.dart';
 import 'package:pavisense/services/data_handler_service.dart';
 import 'package:pavisense/services/draw_service.dart';
 import 'package:pavisense/widgets/data_collection_button.dart';
@@ -27,6 +26,7 @@ class _MapPageState extends State<MapPage> {
   bool _followUser = true;
   double defaultZoom = 18;
   bool _isCollecting = false;
+  List<List<LatLng>> polylines = [];
 
   // moves the map to the current user location
   void _goToUserLocation() async {
@@ -67,7 +67,10 @@ class _MapPageState extends State<MapPage> {
   void _toggleDataColletion() async {
     if (_isCollecting) {
       dataHandlerService.stop();
-      setState(() => _isCollecting = false);
+      setState(() { 
+        _isCollecting = false;
+        polylines = drawService.getPolylines();
+      });
       return;
     }
     _isCollecting = true;
@@ -133,10 +136,19 @@ class _MapPageState extends State<MapPage> {
               ),
               MarkerLayer(markers: [
                 userMarker(),
-              ])
-              // PolylineLayer<Object>(
-              //   polylines: drawService.getPolylines(),
-              // ),
+              ]),
+              PolylineLayer(
+                 polylines: List<Polyline>.generate(
+                  polylines.length,
+                  (int index) {
+                    return Polyline(
+                      points: polylines[index],
+                      strokeWidth: 4.0,
+                      color: Colors.red,
+                    );
+                  }
+                 ),
+              ),
             ],
           ),
           Align(
