@@ -4,6 +4,7 @@ import 'package:flutter_map/flutter_map.dart';
 import 'package:latlong2/latlong.dart';
 import 'package:pavisense/models/ponto_conforto_model.dart';
 import 'package:pavisense/services/data_handler_service.dart';
+import 'package:pavisense/services/draw_service.dart';
 import 'package:pavisense/widgets/data_collection_button.dart';
 import '../services/location_service.dart';
 import '../widgets/location_button.dart';
@@ -20,6 +21,7 @@ class MapPage extends StatefulWidget {
 class _MapPageState extends State<MapPage> {
   final MapController _mapController = MapController();
   final DataHandlerService dataHandlerService = DataHandlerService();
+  final DrawService drawService = DrawService();
   LatLng _center = LatLng(-14.235004, -51.92528); // Brasil
   StreamSubscription<Position>? _positionStream;
   bool _followUser = true;
@@ -69,7 +71,7 @@ class _MapPageState extends State<MapPage> {
       return;
     }
     _isCollecting = true;
-    dataHandlerService.start(Duration(milliseconds: 100));
+    dataHandlerService.start(Duration(milliseconds: 100), drawService);
   }
 
   @override
@@ -129,13 +131,12 @@ class _MapPageState extends State<MapPage> {
                 urlTemplate: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
                 userAgentPackageName: 'com.pavisense.example',
               ),
-              // ValueListenableBuilder<List<Polyline>>(
-              //   valueListenable: _polylines,
-              //   builder: (context, linhas, _) {
-              //     return PolylineLayer(polylines: linhas);
-              //   },
+              MarkerLayer(markers: [
+                userMarker(),
+              ])
+              // PolylineLayer<Object>(
+              //   polylines: drawService.getPolylines(),
               // ),
-              MarkerLayer(markers: [userMarker()]),
             ],
           ),
           Align(

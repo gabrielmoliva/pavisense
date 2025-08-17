@@ -1,16 +1,21 @@
 import 'dart:async';
-import 'package:pavisense/services/websocket_service.dart';
+import 'package:pavisense/services/draw_service.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'package:geolocator/geolocator.dart';
+import 'dart:convert';
+import 'package:flutter_dotenv/flutter_dotenv.dart';
+import 'package:web_socket_channel/io.dart';
+import 'package:pavisense/models/ponto_conforto_model.dart';
 
 class DataHandlerService {
-  final WebsocketService _websocketService = WebsocketService();
   Timer? _collectionTimer;
+  final _wsUrl = dotenv.env['WS_URL'];
+  late IOWebSocketChannel? _channel;
 
-  DataHandlerService();
+  void start(Duration collectionFrequency, DrawService drawService) async {
+    _channel = IOWebSocketChannel.connect(Uri.parse(_wsUrl!));
 
-  void start(Duration collectionFrequency) async {
-    _websocketService.connect();
+    _receiveData(drawService);
 
     _collectionTimer = Timer.periodic(collectionFrequency, (_) async {
       final accEvent = await accelerometerEventStream().first;
@@ -30,12 +35,35 @@ class DataHandlerService {
         'speed': position.speed,
       };
 
-      _websocketService.sendData(data);
+      if (_channel != null) {
+        final json = jsonEncode(data);
+        _channel?.sink.add(json);
+      }
+      else {
+        throw Exception("Erro ao enviar dados via websocket");
+      }
     });
   }
 
   void stop() {
     _collectionTimer?.cancel();
-    _websocketService.disconnect();
+    _channel?.sink.close();
+  }
+
+  void _receiveData(DrawService drawService) {
+    _channel?.stream.listen((message) {
+      try {
+        print("Mensagem recebida do WS: $message");
+        print("Tipo após decode: ${jsonDecode(message).runtimeType}");
+        final ponto = PontoConfortoModel.fromJson(jsonDecode(message));
+        drawService.addPoints([ponto]);
+      } catch (e) {
+        throw "Erro ao processar mensagem do WebSocket: $e";
+      }
+    }, onError: (error) {
+      print("Erro no WebSocket: $error");
+    }, onDone: () {
+      print("Conexão WebSocket encerrada");
+    });
   }
 }

@@ -1,20 +1,34 @@
+import 'package:flutter/widgets.dart';
+import 'package:latlong2/latlong.dart';
+
 class PontoConfortoModel {
-  final double lat;
-  final double long;
-  final int conforto; // 1 = bom, 2 = ruim
+  final LatLng coords;
+  final NivelConforto conforto; // 0 = bom, 1 = ruim
 
   PontoConfortoModel({
-    required this.lat,
-    required this.long,
+    required this.coords,
     required this.conforto,
   });
 
   // Método para criar a partir de JSON
   factory PontoConfortoModel.fromJson(Map<String, dynamic> json) {
     return PontoConfortoModel(
-      lat: json['lat'],
-      long: json['long'],
-      conforto: json['conforto'],
+      coords: LatLng(json['lat'], json['long']),
+      conforto: json['conforto'] == 0 
+        ? NivelConforto.goodRoad 
+        : NivelConforto.badRoad,
     );
   }
+
+  Color getColor() {
+    if (conforto==1) {
+      return Color.fromARGB(0, 86, 177, 48);
+    }
+    return Color.fromARGB(0, 209, 21, 21);
+  }
+}
+
+enum NivelConforto {
+  goodRoad,
+  badRoad
 }
