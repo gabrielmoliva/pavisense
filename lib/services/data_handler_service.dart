@@ -48,13 +48,12 @@ class DataHandlerService {
   void stop() {
     _collectionTimer?.cancel();
     _channel?.sink.close();
+    
   }
 
   void _receiveData(DrawService drawService) {
     _channel?.stream.listen((message) {
       try {
-        print("Mensagem recebida do WS: $message");
-        print("Tipo após decode: ${jsonDecode(message).runtimeType}");
         final ponto = PontoConfortoModel.fromJson(jsonDecode(message));
         drawService.addPoints([ponto]);
       } catch (e) {
