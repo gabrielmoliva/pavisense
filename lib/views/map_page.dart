@@ -10,6 +10,7 @@ import '../widgets/location_button.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/search_location_bar.dart';
 import 'package:permission_handler/permission_handler.dart';
+import '../widgets/configuration_button.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -90,7 +91,7 @@ class _MapPageState extends State<MapPage> {
       return;
     }
     _isCollecting = true;
-    dataHandlerService.start(Duration(milliseconds: 100), drawService);
+    dataHandlerService.start(Duration(seconds: 1), drawService);
   }
 
   @override
@@ -182,6 +183,13 @@ class _MapPageState extends State<MapPage> {
             child: Padding(
               padding: const EdgeInsets.only(left: 24.0, bottom: 24.0),
               child: LocationButton(onPressed: _goToUserLocation),
+            ),
+          ),
+          Align(
+            alignment: Alignment.bottomRight,
+            child: Padding(
+              padding: const EdgeInsets.only(right: 24.0, bottom: 24.0),
+              child: ConfigButton(),
             ),
           ),
           Positioned(
