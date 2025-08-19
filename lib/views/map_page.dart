@@ -9,6 +9,7 @@ import '../services/location_service.dart';
 import '../widgets/location_button.dart';
 import 'package:geolocator/geolocator.dart';
 import '../widgets/search_location_bar.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -44,8 +45,13 @@ class _MapPageState extends State<MapPage> {
 
   // starts map on the users current location and starts to follow user
   Future<void> _initializeMap() async {
-    final locationService = LocationService();
+    final granted = await _requestLocationPermission();
+    if (!granted) {
+      print("Permissão de localização negada!");
+      return;
+    }
 
+    final locationService = LocationService();
     final initialLocation = await locationService.getFirstPositionFromStream();
     if (initialLocation != null) {
       final initialLatLng = LatLng(initialLocation.latitude, initialLocation.longitude);
@@ -61,6 +67,16 @@ class _MapPageState extends State<MapPage> {
         _mapController.move(newPos, _mapController.camera.zoom);
       }
     });
+  }
+
+  Future<bool> _requestLocationPermission() async {
+    var status = await Permission.location.status;
+    if (status.isGranted) {
+      return true;
+    } else {
+      status = await Permission.location.request();
+      return status.isGranted;
+    }
   }
 
   // starts collecting and sending data to backend
