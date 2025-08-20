@@ -157,16 +157,7 @@ class _MapPageState extends State<MapPage> {
                 userMarker(),
               ]),
               PolylineLayer(
-                 polylines: List<Polyline>.generate(
-                  polylines.length,
-                  (int index) {
-                    return Polyline(
-                      points: polylines[index],
-                      strokeWidth: 4.0,
-                      color: Colors.red,
-                    );
-                  }
-                 ),
+                polylines: _polylines,
               ),
             ],
           ),
