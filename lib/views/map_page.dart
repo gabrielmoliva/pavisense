@@ -28,7 +28,7 @@ class _MapPageState extends State<MapPage> {
   bool _followUser = true;
   double defaultZoom = 18;
   bool _isCollecting = false;
-  List<List<LatLng>> polylines = [];
+  List<Polyline> _polylines = [];
 
   // moves the map to the current user location
   void _goToUserLocation() async {
@@ -88,7 +88,7 @@ class _MapPageState extends State<MapPage> {
       dataHandlerService.stop();
       setState(() { 
         _isCollecting = false;
-        polylines = drawService.getPolylines();
+        _polylines = drawService.drawLines();
       });
       return;
     }
