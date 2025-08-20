@@ -48,7 +48,9 @@ class _MapPageState extends State<MapPage> {
   Future<void> _initializeMap() async {
     final granted = await _requestLocationPermission();
     if (!granted) {
-      print("Permissão de localização negada!");
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Permissão de localização negada")),
+      );
       return;
     }
 
@@ -91,7 +93,7 @@ class _MapPageState extends State<MapPage> {
       return;
     }
     _isCollecting = true;
-    dataHandlerService.start(Duration(seconds: 1), drawService);
+    dataHandlerService.start(Duration(milliseconds: 100), drawService);
   }
 
   @override
