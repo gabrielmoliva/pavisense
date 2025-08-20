@@ -11,9 +11,12 @@ class DataHandlerService {
   Timer? _collectionTimer;
   final _wsUrl = dotenv.env['WS_URL'];
   late IOWebSocketChannel? _channel;
+  bool _isConnected = false;
+  bool _isBeingUsed = false;
 
   void start(Duration collectionFrequency, DrawService drawService) async {
     _channel = IOWebSocketChannel.connect(Uri.parse(_wsUrl!));
+    _isConnected = true;
 
     _receiveData(drawService);
 
@@ -35,29 +38,39 @@ class DataHandlerService {
         'speed': position.speed,
       };
 
-      if (_channel != null) {
-        final json = jsonEncode(data);
-        _channel?.sink.add(json);
-      }
-      else {
-        throw Exception("Erro ao enviar dados via websocket");
+        if (_channel != null && _isConnected && !_isBeingUsed) {
+          _isBeingUsed = true;
+          final json = jsonEncode(data);
+          try {
+            _channel?.sink.add(json);
+          } catch (e) {
+            print('Falha ao enviar dados: $e');
+          }
+          _isBeingUsed = false;
+        }
       }
     });
   }
 
   void stop() {
-    _collectionTimer?.cancel();
-    _channel?.sink.close();
-    
+    if (!_isBeingUsed) {
+      _isBeingUsed = true;
+      _collectionTimer?.cancel();
+      _collectionTimer = null;
+      _isConnected = false;
+      _channel?.sink.close();
+      _channel = null;
+      _isBeingUsed = false;
+    }
   }
 
   void _receiveData(DrawService drawService) {
     _channel?.stream.listen((message) {
       try {
         final ponto = PontoConfortoModel.fromJson(jsonDecode(message));
-        drawService.addPoints([ponto]);
+        drawService.addPoint(ponto);
       } catch (e) {
-        throw "Erro ao processar mensagem do WebSocket: $e";
+        print("Erro ao processar mensagem do WebSocket: $e");
       }
     }, onError: (error) {
       print("Erro no WebSocket: $error");
