@@ -22,7 +22,7 @@ class PontoConfortoModel {
 
   Color getColor() {
     if (conforto==1) {
-      return Color.fromARGB(0, 86, 177, 48);
+      return Color(0xFF2BA17F);
     }
     return Color(0xFFE00A0A);
   }
