@@ -24,7 +24,7 @@ class PontoConfortoModel {
     if (conforto==1) {
       return Color.fromARGB(0, 86, 177, 48);
     }
-    return Color.fromARGB(0, 209, 21, 21);
+    return Color(0xFFE00A0A);
   }
 }
 
