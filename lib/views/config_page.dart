@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pavisense/services/auth_service.dart';
 
 class ConfigPage extends StatefulWidget {
   const ConfigPage({super.key});
@@ -10,6 +11,12 @@ class ConfigPage extends StatefulWidget {
 class _ConfigPageState extends State<ConfigPage> {
   double _windowSize = 100; // valor inicial (backend)
   double _samplingRate = 1; // em segundos (frontend)
+  final AuthService _authService = AuthService();
+
+  Future<void> _logout() async {
+    await _authService.logout();
+    Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -59,6 +66,27 @@ class _ConfigPageState extends State<ConfigPage> {
               },
             ),
             Text("Intervalo: ${_samplingRate.toStringAsFixed(1)} segundos"),
+
+            const Spacer(),
+
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2C2C2C),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+                onPressed: () => _logout(),
+                child: const Text(
+                  "Logout",
+                  style: TextStyle(fontSize: 16),
+                ),
+              ),
+            ),
 
             const Spacer(),
 
