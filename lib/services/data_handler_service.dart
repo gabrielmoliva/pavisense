@@ -6,16 +6,28 @@ import 'dart:convert';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:web_socket_channel/io.dart';
 import 'package:pavisense/models/ponto_conforto_model.dart';
+import 'dart:math';
+import 'package:jwt_decoder/jwt_decoder.dart';
+import 'package:pavisense/services/auth_service.dart';
 
 class DataHandlerService {
   Timer? _collectionTimer;
+  AuthService authService = AuthService();
   final _wsUrl = dotenv.env['WS_URL'];
   late IOWebSocketChannel? _channel;
   bool _isConnected = false;
   bool _isBeingUsed = false;
 
   void start(Duration collectionFrequency, DrawService drawService) async {
-    _channel = IOWebSocketChannel.connect(Uri.parse(_wsUrl!));
+    String? token = await authService.getToken();
+    if (token == null) {
+      print("Token não encontrado");
+      return;
+    }
+    Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
+    String userId = decodedToken["sub"].toString();
+
+    _channel = IOWebSocketChannel.connect(Uri.parse('${_wsUrl!}/$userId'));
     _isConnected = true;
 
     _receiveData(drawService);
