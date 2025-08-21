@@ -21,7 +21,7 @@ class PontoConfortoModel {
   }
 
   Color getColor() {
-    if (conforto==1) {
+    if (conforto==NivelConforto.goodRoad) {
       return Color(0xFF2BA17F);
     }
     return Color(0xFFE00A0A);
