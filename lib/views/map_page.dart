@@ -88,7 +88,8 @@ class _MapPageState extends State<MapPage> {
       dataHandlerService.stop();
       setState(() { 
         _isCollecting = false;
-        _polylines = drawService.drawLines();
+        _polylines.addAll(drawService.drawLines());
+        drawService.clear();
       });
       return;
     }
