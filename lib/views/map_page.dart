@@ -97,7 +97,9 @@ class _MapPageState extends State<MapPage> {
 
     final prefs = await SharedPreferences.getInstance();
     int selectedModel = prefs.getInt("selectedModel") ?? 0;
-    _isCollecting = true;
+    setState(() {
+      _isCollecting = true;
+    });
     dataHandlerService.start(Duration(milliseconds: 100), drawService, selectedModel);
   }
 
