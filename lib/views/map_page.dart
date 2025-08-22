@@ -11,6 +11,7 @@ import 'package:geolocator/geolocator.dart';
 import '../widgets/search_location_bar.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../widgets/configuration_button.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class MapPage extends StatefulWidget {
   const MapPage({super.key});
@@ -93,8 +94,11 @@ class _MapPageState extends State<MapPage> {
       });
       return;
     }
+
+    final prefs = await SharedPreferences.getInstance();
+    int selectedModel = prefs.getInt("selectedModel") ?? 0;
     _isCollecting = true;
-    dataHandlerService.start(Duration(milliseconds: 100), drawService);
+    dataHandlerService.start(Duration(milliseconds: 100), drawService, selectedModel);
   }
 
   @override

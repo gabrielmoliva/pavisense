@@ -30,7 +30,7 @@ class DrawService {
           Polyline(
             points: currentSegment,
             color: currentColor,
-            strokeWidth: 6.0
+            strokeWidth: 4.0
           )
         );
 
@@ -44,7 +44,7 @@ class DrawService {
         Polyline(
           points: currentSegment,
           color: currentColor,
-          strokeWidth: 6.0
+          strokeWidth: 4.0
         )
       );
     }

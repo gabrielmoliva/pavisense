@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pavisense/services/auth_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class ConfigPage extends StatefulWidget {
   const ConfigPage({super.key});
@@ -12,10 +13,33 @@ class _ConfigPageState extends State<ConfigPage> {
   double _windowSize = 100; // valor inicial (backend)
   double _samplingRate = 1; // em segundos (frontend)
   final AuthService _authService = AuthService();
+  int _selectedModel = 0; // 0 = extra trees; 1 = mlp
+
+  @override
+  void initState () {
+    super.initState();
+    _loadPreferences();
+  }
 
   Future<void> _logout() async {
     await _authService.logout();
     Navigator.pushNamedAndRemoveUntil(context, "/login", (route) => false);
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      _windowSize = prefs.getDouble("windowSize") ?? 100;
+      _samplingRate = prefs.getDouble("samplingRate") ?? 1;
+      _selectedModel = prefs.getInt("selectedModel") ?? 0;
+    });
+  }
+
+  Future<void> _savePreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setDouble("windowSize", _windowSize);
+    await prefs.setDouble("samplingRate", _samplingRate);
+    await prefs.setInt("selectedModel", _selectedModel);
   }
 
   @override
@@ -67,6 +91,27 @@ class _ConfigPageState extends State<ConfigPage> {
             ),
             Text("Intervalo: ${_samplingRate.toStringAsFixed(1)} segundos"),
 
+            const SizedBox(height: 32),
+
+            const Text(
+              "Modelo de previsão",
+              style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+            ),
+            SwitchListTile(
+              title: Text(
+                _selectedModel == 0
+                    ? "ExtraTreesClassifier"
+                    : "MLPClassifier",
+              ),
+              value: _selectedModel == 1,
+              activeColor: Colors.green,
+              onChanged: (value) {
+                setState(() {
+                  _selectedModel = value ? 1 : 0;
+                });
+              },
+            ),
+
             const Spacer(),
 
             SizedBox(
@@ -102,12 +147,12 @@ class _ConfigPageState extends State<ConfigPage> {
                     borderRadius: BorderRadius.circular(12),
                   ),
                 ),
-                onPressed: () {
-                  // aqui você poderia salvar em SharedPreferences
-                  // e aplicar no app
+                onPressed: () async {
+                  await _savePreferences();
                   Navigator.pop(context, {
                     "windowSize": _windowSize.round(),
                     "samplingRate": _samplingRate,
+                    "selectedModel": _selectedModel,
                   });
                 },
                 child: const Text(

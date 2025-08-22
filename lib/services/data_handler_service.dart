@@ -18,7 +18,7 @@ class DataHandlerService {
   bool _isConnected = false;
   bool _isBeingUsed = false;
 
-  void start(Duration collectionFrequency, DrawService drawService) async {
+  void start(Duration collectionFrequency, DrawService drawService, int selectedModel) async {
     String? token = await authService.getToken();
     if (token == null) {
       print("Token não encontrado");
@@ -27,7 +27,7 @@ class DataHandlerService {
     Map<String, dynamic> decodedToken = JwtDecoder.decode(token);
     String userId = decodedToken["sub"].toString();
 
-    _channel = IOWebSocketChannel.connect(Uri.parse('${_wsUrl!}/$userId'));
+    _channel = IOWebSocketChannel.connect(Uri.parse('${_wsUrl!}/$userId/$selectedModel'));
     _isConnected = true;
 
     _receiveData(drawService);
